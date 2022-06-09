@@ -1,0 +1,43 @@
+# Use the latest 2.1 version of CircleCI pipeline process engine. See: https://circleci.com/docs/2.0/configuration-reference
+version: 2.1
+parameters:
+    storage_name:
+        type: string
+        default: "us-east1-rnd-composer-98772018-bucket"
+
+# Orchestrate or schedule a set of jobs
+jobs:
+    # Name the workflow "welcome"
+    build:
+        docker:
+            - image: circleci/python:3.7.4-buster
+
+        environment:
+            STORAGE_NAME: <<pipeline.parameters.storage_name>>
+
+        working_directory: ~/repo
+
+        steps:
+            - checkout
+
+            - run:
+                name: install cloud deployment tools
+                command: |
+                    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+                    sudo apt-get install apt-transport-https ca-certificates gnupg
+                    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+                    sudo apt-get update && sudo apt-get install google-cloud-sdk
+
+            - run:
+                name: Login to Google Cloud
+                command: |
+                    echo "${GCLOUD_SERVICE_KEY}" > service_account.json
+                    gcloud auth activate-service-account \
+                        circleci@dft-rnd-kubeflow.iam.gserviceaccount.com \
+                        --key-file=service_account.json \
+                        --project=${GOOGLE_PROJECT_ID}
+
+            - run:
+                name: Push dags to Storage
+                command: |
+                    gsutil rsync -r dags gs://${STORAGE_NAME}/dags
