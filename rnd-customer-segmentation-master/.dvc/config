@@ -1,0 +1,6 @@
+['remote "eda"']
+url = gs://dft-data
+['remote "dft-live"']
+url = s3://rad-customer-segmentation/dvc
+[core]
+remote = dft-live

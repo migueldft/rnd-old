@@ -1,0 +1,24 @@
+etl:
+  bigquery_sql_file: ./sql/crm_tests_user_tracking.sql
+  query_date_ranges:
+    # examples
+    # - [20200301, 20200304]  # from 20200301 to 20200304
+    # - [20200302, -1]        # from 20200302 to now
+    # - [20190302]            # and this specific date
+    # - 20200304              # and this specific date
+    - [20200615,20200630]
+  MAX_GIGABYTES_BILLED: 50
+  bigquery_destination_dataset: RnD_Renan
+  bigquery_destination_table: crm_tests_user_tracking
+  bigquery_table_expiration:
+    weeks_to_expire_table: 
+    days_to_expire_table:
+    hours_to_expire_table:
+    minutes_to_expire_table:
+  gcs_bucket: rnd_bigquery_staging
+  bigquery_csv_filename: ../ml/input/data/raw/crm_tests_user_tracking.csv
+  
+  redshift_sql_file: ./sql/rs_get_dim_customer.sql
+  s3_bucket: gfg-rnd-dev-us-east-1-dump
+  redshift_csv_filename: ./datasets/lifts/crm_lift_braze_users.csv
+  redshift_to_bigquery_destination_table: crm_lift_braze_users

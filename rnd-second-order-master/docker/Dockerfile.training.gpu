@@ -1,0 +1,43 @@
+FROM nvidia/cuda:9.2-devel-ubuntu18.04
+LABEL maintainer="ricardo.savii@dafiti.com.br"
+
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
+COPY Pipfile* Pipfile.lock ./
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git=1:2.17.1-1ubuntu0.7 \
+        build-essential=12.4ubuntu1 \
+        libssl-dev \
+        wget=1.19.4-1ubuntu2.2 \
+        python3-pip \
+        python3-setuptools=39.0.1-2 \
+        python3.6-dev \
+        nginx \
+        libgomp1 \
+    && wget https://github.com/Kitware/CMake/releases/download/v3.13.5/cmake-3.13.5-Linux-x86_64.sh \
+        -q -O /tmp/cmake-install.sh \
+        && chmod u+x /tmp/cmake-install.sh \
+        && mkdir /usr/bin/cmake \
+        && /tmp/cmake-install.sh --skip-license --exclude-subidr --prefix=/usr/local/ \
+        && chmod a+x /usr/bin/cmake \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
+    && pip3 install --no-cache-dir pipenv==2020.8.13 \
+    && pipenv install --system --ignore-pipfile --deploy --clear \
+    && pip uninstall pipenv -y
+
+RUN git clone --recursive --branch release_0.90 https://github.com/dmlc/xgboost \
+    && mkdir -p xgboost/build
+WORKDIR /xgboost/build/
+RUN cmake .. -DUSE_CUDA=ON && make "-j$(nproc)"
+ENV PYTHONPATH=/xgboost/python-package
+
+ENV PYTHONUNBUFFERED=TRUE
+ENV PYTHONDONTWRITEBYTECODE=TRUE
+ENV PATH="/opt/program/:${PATH}"
+ENV ENVIRON="Docker"
+
+COPY src /opt/program
+WORKDIR /opt/program
+RUN chmod +x /opt/program/train

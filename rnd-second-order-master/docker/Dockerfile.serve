@@ -1,0 +1,26 @@
+FROM python:3.6-slim
+LABEL maintainer="ricardo.savii@dafiti.com.br"
+
+COPY Pipfile Pipfile.lock ./
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        nginx \
+        libgomp1=8.3.0-6 \
+    && pip install --no-cache-dir pipenv==2018.11.26 \
+    && pipenv install --system --deploy --clear \
+    && pip uninstall pipenv -y \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PYTHONUNBUFFERED=TRUE
+ENV PYTHONDONTWRITEBYTECODE=TRUE
+ENV PATH="/opt/program/:${PATH}"
+ENV ENVIRON="Docker"
+
+# Set up the program and config in the image
+COPY api /opt/program
+COPY src /opt/program
+
+WORKDIR /opt/program
+RUN chmod +x /opt/program/serve
+
+EXPOSE 8080

@@ -1,0 +1,15 @@
+[
+    {
+        "ChannelName": "raw",
+        "DataSource": {
+            "S3DataSource": {
+                "S3DataType": "S3Prefix",
+                "S3Uri": "s3://719003640801-media-attribution/input/data/raw/",
+                "S3DataDistributionType": "FullyReplicated"
+            }
+        },
+        "ContentType": "text/csv",
+        "CompressionType": "None",
+        "InputMode": "File"
+    }
+]

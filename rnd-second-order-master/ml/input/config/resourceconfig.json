@@ -1,0 +1,5 @@
+{
+    "InstanceType": "ml.p3.2xlarge",
+    "InstanceCount": 1,
+    "VolumeSizeInGB": 30
+}

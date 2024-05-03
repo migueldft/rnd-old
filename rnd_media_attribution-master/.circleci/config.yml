@@ -1,0 +1,174 @@
+
+version: 2.1
+
+orbs:
+    slack: circleci/slack@3.4.2
+    aws-cli: circleci/aws-cli@1.0.0
+
+executors:
+    python-executor:
+        docker:
+            - image: circleci/python:3.6-buster
+        environment:
+            PIPENV_VENV_IN_PROJECT: true
+        resource_class: medium
+
+parameters:
+    application_name:
+        type: string
+        default: "media-attribution"
+    application_bucket:
+        type: string
+        default: "s3://719003640801-media-attribution"
+
+workflows:
+    version: 2
+    build-test-deploy:
+        jobs:
+        - download-dependencies
+        # - python-lint:
+        #     requires:
+        #         - download-dependencies
+        # - python-test:
+        #     requires:
+        #         - download-dependencies
+        # - python-coverage:
+        #     requires:
+        #         - download-dependencies
+        - docker-lint
+        - build-and-push-image:
+            requires:
+                # - python-lint
+                # - python-test
+                # - python-coverage
+                - docker-lint
+            filters:
+                branches:
+                    only: master
+        - slack-training-approval:
+            requires:
+                - build-and-push-image
+            filters:
+                branches:
+                    only: master
+        - approve-training-job:
+            type: approval
+            requires:
+                - build-and-push-image
+            filters:
+                branches:
+                    only: master
+        - training-job:
+            requires:
+                - approve-training-job
+            filters:
+                branches:
+                    only: master
+
+jobs:
+    download-dependencies:
+        executor: python-executor
+        steps:
+            - checkout
+            - restore_cache:
+                keys:
+                    - deps9-{{ .Branch }}-{{ checksum "Pipfile.lock" }}
+            - run:
+                name: install dependencies
+                command: |
+                    pipenv install --dev
+            - save_cache:
+                key: deps9-{{ .Branch }}-{{ checksum "Pipfile.lock" }}
+                paths:
+                    - ".venv"
+
+    python-lint:
+        executor: python-executor
+        steps:
+            - checkout
+            - restore_cache:
+                keys:
+                    - deps9-{{ .Branch }}-{{ checksum "Pipfile.lock" }}
+            - run:
+                name: Run Application lint
+                command: |
+                    make lint-python
+
+    python-test:
+        executor: python-executor
+        steps:
+            - checkout
+            - restore_cache:
+                keys:
+                    - deps9-{{ .Branch }}-{{ checksum "Pipfile.lock" }}
+            - run:
+                name: Run Application tests
+                command: |
+                    make test
+
+    python-coverage:
+        executor: python-executor
+        steps:
+            - checkout
+            - restore_cache:
+                keys:
+                    - deps9-{{ .Branch }}-{{ checksum "Pipfile.lock" }}
+            - run:
+                name: Test coverage
+                command: |
+                    make coverage
+            - store_artifacts:
+                path: htmlcov
+
+    docker-lint:
+        machine: true
+        steps:
+            - checkout
+            - run:
+                name: Lint Dockerfile
+                command: |
+                    make lint-docker
+
+    build-and-push-image:
+        executor: aws-cli/default
+        steps:
+            - checkout
+            - aws-cli/setup
+            - setup_remote_docker:
+                docker_layer_caching: true
+            - run:
+                name: Build Image
+                command: |
+                    make build-docker
+            - run:
+                name: Release Image
+                command: |
+                    make release-image DOCKER_SERVER=$DOCKER_SERVER
+                    make release-image DOCKER_SERVER=$DOCKER_SERVER IMAGE_TAG_PUSH=latest
+
+    slack-training-approval:
+        machine: true
+        steps:
+            - slack/notify:
+                channel: 'research-circleci'
+                color: '#2bff05'
+                mentions: 'ricoms'
+                message: |
+                    [${CIRCLE_USERNAME}] Please check and approve Jobs to manually deploy AWS Sagemaker training job.
+                    https://circleci.com/workflow-run/${CIRCLE_WORKFLOW_ID}
+                webhook: '${SLACK_WEBHOOK}'
+
+    training-job:
+        executor: aws-cli/default
+        steps:
+            - checkout
+            - aws-cli/setup
+            - run:
+                name: Submit Training Job
+                command: |
+                    mkdir -p /tmp/workspace
+                    make sagemaker-training-job AWS_SAGEMAKER_ROLE=$AWS_SAGEMAKER_ROLE AWS_PROJECT_BUCKET=$AWS_PROJECT_BUCKET > /tmp/workspace/training_job_output.json
+            - persist_to_workspace:
+                root: /tmp/workspace
+                paths:
+                - training_job_output.json

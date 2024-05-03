@@ -1,0 +1,7 @@
+Exception during training: y_true sum is zero
+Traceback (most recent call last):
+  File "/opt/program/experiment/experiment.py", line 565, in run
+    rm_effect, df_tri_re = self.generate_removal_effect()
+  File "/opt/program/experiment/experiment.py", line 213, in generate_removal_effect
+    assert y_true0.sum() > 0, 'y_true sum is zero'
+AssertionError: y_true sum is zero

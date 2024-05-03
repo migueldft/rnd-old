@@ -1,0 +1,27 @@
+md5: ff261a7ea9afaef99d622a0a935d0b51
+cmd: make get-data
+wdir: .
+deps:
+- md5: af21a2d9a897cedbae3a1624d11211a1
+  path: Makefile
+- md5: b290e8a9ba0ef5ad5ff0eafbf0ea05d8
+  path: Dockerfile
+- md5: 31333f433a5c650ff8f7c0ddd4cec517
+  path: src/services/get_data.py
+- md5: 700aca42749e4ab780f12b59f4573a24.dir
+  path: src/services/utils
+- md5: 0033acfd4ead26f56bf1e12b63d060c1.dir
+  path: src/services/queries
+- md5: 064bbea5bade3a539928c46be40041d9
+  path: test_dir/input/config/secrets.json
+outs:
+- md5: fbf4f774b64666e3e6ec0f28a3a21140.dir
+  path: test_dir/input/data/training
+  cache: true
+  metric: false
+  persist: false
+- md5: 95e40a3dd227bf71586f0015c175e40d
+  path: test_dir/input/data/urls.gz
+  cache: true
+  metric: false
+  persist: false
